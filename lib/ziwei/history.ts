@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { BirthFormState } from '@/components/BirthForm';
+import { ANNOTATION_TOPIC_LABELS } from './types';
 
 const STORAGE_KEY = 'ziwei_history';
 const MAX_ENTRIES = 10;
@@ -24,9 +25,10 @@ export function useHistory() {
   const save = useCallback((form: BirthFormState) => {
     const label = [
       form.name,
-      `${form.year}年${form.month}月${form.day}日`,
+      `${form.calendarType === 'solar' ? '公历' : '农历'}${form.isLeapMonth ? '闰' : ''}${form.year}年${form.month}月${form.day}日`,
       form.city || form.province || '',
       form.gender === 'male' ? '男' : '女',
+      form.annotationTopics?.length ? form.annotationTopics.map(t => ANNOTATION_TOPIC_LABELS[t]).join('/') : '',
     ].filter(Boolean).join(' · ');
 
     const entry: HistoryEntry = {

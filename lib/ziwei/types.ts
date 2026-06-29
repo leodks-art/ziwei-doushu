@@ -1,3 +1,28 @@
+export type CalendarType = 'lunar' | 'solar';
+
+export type AnnotationTopicKey =
+  | 'marriage'
+  | 'career'
+  | 'wealth'
+  | 'family'
+  | 'children'
+  | 'health'
+  | 'personality'
+  | 'migration';
+
+export const ANNOTATION_TOPIC_LABELS: Record<AnnotationTopicKey, string> = {
+  marriage: '婚姻',
+  career: '事业',
+  wealth: '财运',
+  family: '家庭',
+  children: '子女',
+  health: '健康',
+  personality: '性格',
+  migration: '迁移',
+};
+
+export const DEFAULT_ANNOTATION_TOPICS: AnnotationTopicKey[] = ['marriage', 'career', 'wealth'];
+
 export interface BirthInfo {
   year: number;      // Gregorian year
   month: number;     // Gregorian month (1-12)
@@ -8,6 +33,15 @@ export interface BirthInfo {
   province?: string;   // 出生省份
   city?: string;       // 出生城市
   longitude?: number;  // 出生地经度（用于真太阳时校正）
+  inputCalendar?: CalendarType;
+  inputDate?: {
+    calendar: CalendarType;
+    year: number;
+    month: number;
+    day: number;
+    isLeapMonth?: boolean;
+  };
+  annotationTopics?: AnnotationTopicKey[];
 }
 
 export interface LunarInfo {

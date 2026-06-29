@@ -49,6 +49,11 @@ export default function LibraryHomePage() {
       {/* 搜索 */}
       <div className="max-w-2xl mx-auto px-6 mb-12">
         <LibrarySearch />
+        <div style={{ marginTop: '14px', textAlign: 'center' }}>
+          <Link href="/paid-downloads" style={{ color: 'var(--ac)', fontSize: '13px', textDecoration: 'none', letterSpacing: '0.12em' }}>
+            完整文档下载 · 微信支付 →
+          </Link>
+        </div>
       </div>
 
       {/* 古籍列表 */}

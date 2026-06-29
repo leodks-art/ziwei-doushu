@@ -2,13 +2,13 @@
 
 > 🎉 **网站已完成 ICP 备案**（渝ICP备2026013379号-1），主域名已正式上线、全部功能正常访问。
 >
-> 直接访问主域名 **https://metisziwei.com** 即可，排盘 / AI 解读 / 命盘历史等全部功能均已开放。
+> 直接访问主域名 **https://luchengdr.com** 即可，排盘 / AI 解读 / 命盘历史等全部功能均已开放。
 >
 > 💕 **发财的小手点一下，小红书 / 抖音 / 闲鱼 / X 关注：王多鱼AI**，第一时间看上线 + 解锁更多紫微干货～
 
 基于**倪海夏《天纪》**教学体系的紫微斗数排盘系统，包含完整排盘算法、四化系统、格局知识库、古籍原文数据，以及 **51.8 万条命盘样本数据**。
 
-线上体验：[metisziwei.com](https://metisziwei.com)
+线上体验：[luchengdr.com](https://luchengdr.com)
 
 ---
 
@@ -27,7 +27,7 @@
 | 体系 | 倪海夏《天纪》正统（纯飞星派已下线） |
 | 内容 | 命盘 JSON + 13 主题解读文本（命格总览、财运、事业、感情、健康等） |
 | 验证 | 男女命差异化 100%、健康含子午流注 100%、女命含妇科保养 100% |
-| 口径 | 与线上 [metisziwei.com](https://metisziwei.com) 完全一致 |
+| 口径 | 与线上 [luchengdr.com](https://luchengdr.com) 完全一致 |
 
 ### 下载方式
 
@@ -177,7 +177,7 @@ npm run dev
 
 开源排盘算法和知识库，是因为我们相信：**算法是公开的传统智慧，不应该被锁在围墙里**。真正的价值在于解读的深度、用户体验的打磨、以及持续运营的积累。
 
-想自己搭？代码都在这里，拿去用。嫌麻烦？来 [metisziwei.com](https://metisziwei.com) 直接用。
+想自己搭？代码都在这里，拿去用。嫌麻烦？来 [luchengdr.com](https://luchengdr.com) 直接用。
 
 ---
 
@@ -197,5 +197,5 @@ npm run dev
 
 ## 联系
 
-- 线上平台：[metisziwei.com](https://metisziwei.com)
+- 线上平台：[luchengdr.com](https://luchengdr.com)
 - Issues：欢迎提 Bug 和建议

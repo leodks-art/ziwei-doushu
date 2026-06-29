@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZiweiChart, Palace } from '@/lib/ziwei/types';
+import { ANNOTATION_TOPIC_LABELS, DEFAULT_ANNOTATION_TOPICS } from '@/lib/ziwei/types';
 import type { TimeView } from './TimeNav';
 
 interface Message {
@@ -193,6 +194,10 @@ export default function InsightPanel({ chart, selectedPalace, selectedSiHua }: I
   const lastPalaceBranch = useRef<number | undefined>(undefined);
   const lastSiHuaKey = useRef<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const selectedAnnotationTopics = chart.birthInfo.annotationTopics?.length
+    ? chart.birthInfo.annotationTopics
+    : DEFAULT_ANNOTATION_TOPICS;
+  const selectedAnnotationLabels = selectedAnnotationTopics.map(t => ANNOTATION_TOPIC_LABELS[t]);
 
   // Keep refs in sync
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -209,7 +214,10 @@ export default function InsightPanel({ chart, selectedPalace, selectedSiHua }: I
   useEffect(() => {
     if (autoLoaded.current) return;
     autoLoaded.current = true;
-    sendMessage(TOPIC_PROMPTS.overview, true);
+    sendMessage(`${TOPIC_PROMPTS.overview}
+
+**【详细批注主题】**
+请按用户勾选的主题逐项详细批注：${selectedAnnotationLabels.join('、')}。每个主题都要结合对应宫位、主星、四化、三方四正与当前大限复核。`, true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Inject palace analysis when palace selected
@@ -349,6 +357,9 @@ ${selectedSiHua.starName}化${selectedSiHua.siHua}落在【${palaceName}】，�
 
       {/* ── Topic buttons ── */}
       <div className="flex-shrink-0 px-2 pt-2.5 pb-2" style={{ borderBottom: '1px solid var(--t-border)' }}>
+        <div className="mb-2 px-1 text-[9px] leading-relaxed" style={{ color: 'var(--t-faint)' }}>
+          已选批注：<span style={{ color: 'var(--t-gold)' }}>{selectedAnnotationLabels.join('、')}</span>
+        </div>
         <div className="grid grid-cols-6 gap-1">
           {TOPICS.map(t => {
             const isActive = activeTopic === t.key;

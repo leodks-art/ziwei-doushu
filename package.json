@@ -6,6 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:local": "next start -H 127.0.0.1 -p ${PORT:-3000}",
+    "db:migrate": "node scripts/admin-db-migrate.mjs",
     "build:cf": "npx @cloudflare/next-on-pages",
     "preview:cf": "npx wrangler pages dev",
     "prepare": "husky"
