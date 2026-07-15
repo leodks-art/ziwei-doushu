@@ -57,14 +57,22 @@ createServer(async (req, res) => {
 });
 
 async function enrichPayload(payload) {
-  if (!payload || typeof payload !== 'object' || !payload.chart || !payload.audit) {
+  if (!payload || typeof payload !== 'object' || !payload.audit) {
     return payload;
   }
 
-  const sampleData = await inspectSampleData(payload.chart);
+  const chart = payload.chart || (
+    payload.birthInfo && payload.lunarInfo && Array.isArray(payload.palaces)
+      ? payload
+      : null
+  );
+  if (!chart) return payload;
+
+  const sampleData = await inspectSampleData(chart);
   payload.audit.sampleData = sampleData;
   payload.audit.steps = updateSampleStep(payload.audit.steps, sampleData);
   payload.audit.warnings = updateWarnings(payload.audit.warnings, sampleData);
+  if ('sampleData' in payload) payload.sampleData = sampleData;
   return payload;
 }
 
