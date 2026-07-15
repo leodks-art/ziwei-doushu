@@ -99,7 +99,11 @@ function updateWarnings(warnings, sampleData) {
 async function inspectSampleData(chart) {
   const sampleRoot = resolveSampleRoot(SAMPLE_DIR);
   const sampleYear = cycleSampleYear(chart.lunarInfo?.lunarYear);
-  const candidateFiles = sampleMonthFiles(sampleRoot || path.join(SAMPLE_DIR, 'samples-out'), sampleYear);
+  const candidateFiles = sampleMonthFiles(
+    sampleRoot || path.join(SAMPLE_DIR, 'samples-out'),
+    sampleYear,
+    chart.birthInfo?.month
+  );
   const sampleKey = buildSampleKey(chart);
 
   if (!sampleRoot) {
@@ -193,9 +197,14 @@ function cycleSampleYear(lunarYear) {
   return SAMPLE_CYCLE_START_YEAR + offset;
 }
 
-function sampleMonthFiles(sampleRoot, sampleYear) {
-  return Array.from({ length: 12 }, (_, i) => {
-    const month = String(i + 1).padStart(2, '0');
+function sampleMonthFiles(sampleRoot, sampleYear, preferredMonth) {
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const preferred = Number(preferredMonth);
+  const ordered = Number.isInteger(preferred) && preferred >= 1 && preferred <= 12
+    ? [preferred, ...months.filter(month => month !== preferred)]
+    : months;
+  return ordered.map(value => {
+    const month = String(value).padStart(2, '0');
     return path.join(sampleRoot, `year-${sampleYear}`, `${sampleYear}-${month}.jsonl.gz`);
   });
 }
@@ -305,9 +314,6 @@ function summarizePalaces(palaces) {
     daXianAge: palace.daXianAge ?? null,
     isMingGong: Boolean(palace.isMingGong),
     isShenGong: Boolean(palace.isShenGong),
-    isEmpty: Boolean(palace.isEmpty),
-    borrowedFromBranch: palace.borrowedFromBranch ?? null,
-    borrowedStars: palace.borrowedStars ?? [],
   }));
 }
 
