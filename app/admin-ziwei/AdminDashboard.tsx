@@ -96,7 +96,7 @@ export default function AdminDashboard() {
       <header style={{ height: 56, borderBottom: '1px solid var(--bdr)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px' }}>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <strong>紫微运营后台</strong>
-          <Link href="/paid-downloads" style={linkStyle}>付费页</Link>
+          <Link href="/paid-downloads" style={linkStyle}>免费页</Link>
           <Link href="/" style={linkStyle}>首页</Link>
         </div>
         <button onClick={logout} style={ghostButton}>退出</button>

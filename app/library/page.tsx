@@ -51,7 +51,7 @@ export default function LibraryHomePage() {
         <LibrarySearch />
         <div style={{ marginTop: '14px', textAlign: 'center' }}>
           <Link href="/paid-downloads" style={{ color: 'var(--ac)', fontSize: '13px', textDecoration: 'none', letterSpacing: '0.12em' }}>
-            完整文档下载 · 微信支付 →
+            免费开放说明 →
           </Link>
         </div>
       </div>
