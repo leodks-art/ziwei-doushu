@@ -29,10 +29,10 @@ export default function PaidDownloadsClient() {
             当前免费开放使用
           </h1>
           <p style={{ color: 'var(--tx-2)', lineHeight: 1.8, maxWidth: 680 }}>
-            现在不启用登录和支付。紫微命盘测算、详细批注、古籍原典库先全部免费开放，访问者可直接使用。
+            现在无需登录、无需支付。紫微命盘测算、详细批注、古籍原典库全部免费开放，访问者可直接使用。
           </p>
           <div style={noticeStyle}>
-            付费下载入口已暂时关闭。后续需要收费时，可在后台恢复商品上架并补齐支付配置。
+            所有公开功能都可直接进入。后续如开放资料下载，会在本页清楚标明下载内容与使用方式。
           </div>
           <div style={{ display: 'grid', gap: 12, marginTop: 22 }}>
             {freeItems.map(([title, description]) => (

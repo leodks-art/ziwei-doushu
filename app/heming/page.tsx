@@ -58,7 +58,7 @@ export default function HemingPage() {
   const [formA, setFormA] = useState<BirthFormState | null>(null);
   const [formB, setFormB] = useState<BirthFormState | null>(null);
 
-  // ─── AI 合盘分析状态 ─────────────────────────────────────
+  // ─── 合盘分析状态 ───────────────────────────────────────
   const [analysis, setAnalysis] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [question, setQuestion] = useState('');
@@ -197,7 +197,7 @@ export default function HemingPage() {
             紫微合盘
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--tx-3)', lineHeight: 1.6 }}>
-            输入两个人的出生信息，AI 基于倪海夏体系分析双方命盘的缘分匹配度、感情走向与相处建议
+            输入两个人的出生信息，系统基于倪海夏体系分析双方命盘的缘分匹配度、感情走向与相处建议
           </p>
         </div>
 
@@ -245,7 +245,7 @@ export default function HemingPage() {
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
               <div style={{ fontSize: '13px', color: 'var(--tx-3)', marginBottom: '24px', lineHeight: 1.7 }}>
                 填好双方出生信息后，点击下方按钮<br />
-                AI 将基于倪海夏体系深度分析两人缘分匹配度
+                系统将基于倪海夏体系分析两人缘分匹配度
               </div>
               <button
                 onClick={() => runAnalysis()}

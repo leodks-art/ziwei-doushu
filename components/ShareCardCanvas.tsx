@@ -258,7 +258,7 @@ export default function ShareCardCanvas({ chart, birth, highlight }: ShareCardPr
                 紫微为门 · 天地人为路
               </div>
               <div style={{ fontSize: '10px', color: '#8b6a14', fontWeight: 600, letterSpacing: '0.08em', lineHeight: 1.4, marginTop: '2px' }}>
-                倪海夏为师 · AI 答疑伴学
+                倪海夏为师 · 推导复核伴学
               </div>
               <div style={{ fontSize: '8px', color: '#a89b7c', letterSpacing: '0.15em', marginTop: '4px' }}>
                 扫码起你的命盘 →

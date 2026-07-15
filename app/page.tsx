@@ -110,14 +110,14 @@ const FEATURES = [
     ],
   },
   {
-    tag: 'AI 解读',
+    tag: '命盘解读',
     title: '深度解盘\n不止于算',
-    subtitle: '倪海夏体系知识库 × Claude AI',
+    subtitle: '倪海夏体系知识库 × 推导复核',
     points: [
       '命格分析：从命宫主星出发，结合三方四正，给出全面的性格与人生格局判断',
       '六大维度解读：事业方向、感情婚姻、财运模式、健康注意、家庭关系、子女缘分',
       '大限流年追踪：当前10年大限重点、今年流年宫位的具体提示与行动建议',
-      '自由追问：针对你的命盘直接提问，「今年能换工作吗」「什么时候结婚运最好」',
+      '重点复核：围绕婚姻、事业、财运、家庭、子女等主题生成详细批注',
     ],
   },
   {
@@ -541,7 +541,7 @@ export default function HomePage() {
             transition={{ duration: 0.7, delay: 0.55 }}
             className="text-xs md:text-sm tracking-[0.3em] mb-6"
             style={{ color: c.textMuted, opacity: 0.85 }}>
-            AI 答疑 · 知行合一
+            命盘推导 · 知行合一
           </motion.p>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             transition={{ duration: 0.7, delay: 0.65 }}
@@ -983,7 +983,7 @@ export default function HomePage() {
                 紫微合盘
               </h2>
               <p className="text-sm leading-relaxed mb-8 max-w-lg mx-auto" style={{ color: c.textSecond }}>
-                输入两个人的出生信息，AI 基于倪海夏体系分析夫妻宫互参、命宫兼容性与三方四正交互，<br className="hidden md:block" />
+                输入两个人的出生信息，系统基于倪海夏体系分析夫妻宫互参、命宫兼容性与三方四正交互，<br className="hidden md:block" />
                 给出感情匹配度、合伙可行性与最佳相处建议。
               </p>
               <div className="flex justify-center gap-3 flex-wrap mb-6">
@@ -1025,7 +1025,7 @@ export default function HomePage() {
           </h2>
           <p className="text-sm mb-10 max-w-md mx-auto leading-relaxed" style={{ color: c.textSecond }}>
             输入出生年月日时，在几秒内生成你的专属命盘<br />
-            再由 AI 按倪海夏体系为你深度解读
+            再按倪海夏体系复核推导重点
           </p>
           <motion.button
             whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}

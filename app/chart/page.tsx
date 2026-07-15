@@ -178,7 +178,7 @@ export default function ChartPage() {
                 起紫微命盘
               </h1>
               <p style={{ fontSize: '12px', color: 'var(--tx-3)', letterSpacing: '0.05em' }}>
-                输入出生年月日时 · 以公历为准
+                农历优先输入 · 自动换算公历
               </p>
             </div>
 

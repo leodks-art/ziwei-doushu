@@ -189,7 +189,7 @@ export default async function KnowledgePage({ params }: { params: Promise<{ star
             想看你自己命盘的{data.topicLabel}？
           </div>
           <div style={{ fontSize: '12px', color: 'var(--tx-2)', marginBottom: '16px' }}>
-            输入生辰起盘 · 倪师正宗解读 · AI 答疑伴学
+            输入生辰起盘 · 倪师正宗解读 · 推导复核伴学
           </div>
           <Link href="/chart" style={{
             display: 'inline-block',
