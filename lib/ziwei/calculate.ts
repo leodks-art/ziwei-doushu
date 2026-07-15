@@ -1,5 +1,6 @@
-import { existsSync, readdirSync, statSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { createHash } from 'crypto';
+import { gunzipSync } from 'zlib';
 import path from 'path';
 import { birthDateInputToSolar } from './calendar';
 import {
@@ -27,11 +28,40 @@ export interface AuditStep {
 
 export interface SampleReferenceStatus {
   configured: boolean;
-  status: 'not-installed' | 'directory-found' | 'candidate-found' | 'candidate-missing';
+  status: 'not-installed' | 'directory-found' | 'candidate-found' | 'candidate-missing' | 'candidate-mismatch';
   root?: string;
+  sampleRoot?: string;
+  sampleFile?: string;
+  sampleKey?: string;
+  sampleYear?: number;
   candidateFiles: string[];
+  comparison?: {
+    passed: boolean;
+    checkedFields: string[];
+    mismatches: string[];
+    topicKeys: string[];
+  };
   note: string;
 }
+
+interface SampleChartSummary {
+  birthInfo: BirthInfo;
+  chart: Pick<ZiweiChart, 'lunarInfo' | 'mingGongBranch' | 'shenGongBranch' | 'wuxingJu' | 'wuxingJuName' | 'ziweiPos' | 'palaces' | 'daXians'>;
+  topics: string[];
+  sampleFile: string;
+}
+
+interface SampleYearCache {
+  sampleRoot: string;
+  sampleYear: number;
+  loadedAt: number;
+  samples: Map<string, SampleChartSummary>;
+  files: string[];
+}
+
+const SAMPLE_CYCLE_START_YEAR = 1924;
+const SAMPLE_YEAR_CACHE_LIMIT = 1;
+const sampleYearCache = new Map<string, SampleYearCache>();
 
 export interface CalculationAudit {
   calculationId: string;
@@ -140,11 +170,11 @@ export function calculateChartWithAudit(raw: unknown, liuNianYear = new Date().g
   };
   const currentDaXian = getDaXianSiHua(chart, chart.currentDaXianIndex);
   const liuNian = getLiuNianSiHua(liuNianYear);
-  const sampleData = inspectSampleData(birthInfo);
+  const sampleData = inspectSampleData(birthInfo, chart);
   const references = buildClassicReferences(chart, patterns);
   const warnings: string[] = [];
 
-  if (!sampleData.configured || sampleData.status === 'candidate-missing') {
+  if (sampleData.status !== 'candidate-found') {
     warnings.push(sampleData.note);
   }
 
@@ -227,7 +257,11 @@ export function calculateChartWithAudit(raw: unknown, liuNianYear = new Date().g
     },
     {
       name: '样本数据参照',
-      status: sampleData.status === 'candidate-found' || sampleData.status === 'directory-found' ? 'pass' : 'warn',
+      status: sampleData.status === 'candidate-found'
+        ? 'pass'
+        : sampleData.status === 'candidate-mismatch'
+          ? 'fail'
+          : 'warn',
       details: { ...sampleData },
     },
     {
@@ -318,7 +352,7 @@ function branchLabel(chart: ZiweiChart, branch: number): string {
   return palace ? `${palace.name}(${BRANCHES[branch]})` : BRANCHES[branch] ?? String(branch);
 }
 
-function inspectSampleData(birthInfo: BirthInfo): SampleReferenceStatus {
+function inspectSampleData(birthInfo: BirthInfo, chart: ZiweiChart): SampleReferenceStatus {
   const roots = [
     process.env.ZIWEI_SAMPLE_DIR,
     path.join(process.cwd(), 'data', 'samples'),
@@ -327,34 +361,229 @@ function inspectSampleData(birthInfo: BirthInfo): SampleReferenceStatus {
   ].filter(Boolean) as string[];
 
   const root = roots.find(r => existsSync(r) && statSync(r).isDirectory());
-  const candidateNames = [
-    `${birthInfo.year}-${birthInfo.month}-${birthInfo.day}-${birthInfo.hour}-${birthInfo.gender}.json`,
-    `${birthInfo.year}-${String(birthInfo.month).padStart(2, '0')}-${String(birthInfo.day).padStart(2, '0')}-${birthInfo.hour}-${birthInfo.gender}.json`,
-    `${birthInfo.gender}/${birthInfo.year}/${birthInfo.month}/${birthInfo.day}/${birthInfo.hour}.json`,
-  ];
+  const sampleRoot = root ? resolveSampleRoot(root) : undefined;
+  const sampleYear = cycleSampleYear(chart.lunarInfo.lunarYear);
+  const candidateFiles = sampleRoot
+    ? sampleMonthFiles(sampleRoot, sampleYear)
+    : sampleMonthFiles(path.join(root ?? roots[0] ?? '', 'samples-out'), sampleYear);
+  const sampleKey = buildSampleKey(chart);
 
-  if (!root) {
+  if (!root || !sampleRoot) {
     return {
       configured: false,
       status: 'not-installed',
-      candidateFiles: candidateNames,
+      root,
+      candidateFiles,
       note: '51.8 万样本数据未安装到本地；服务仍按源码算法、四化规则、格局规则和古籍原文复核。可设置 ZIWEI_SAMPLE_DIR 指向 Releases v3.0-samples 解压目录。',
     };
   }
 
-  const candidateFiles = candidateNames.map(name => path.join(root, name));
-  const found = candidateFiles.find(file => existsSync(file));
-  const hasFiles = safeHasAnyFile(root);
+  const existingFiles = candidateFiles.filter(file => existsSync(file));
+  const hasFiles = safeHasAnyFile(sampleRoot);
+  if (existingFiles.length === 0) {
+    return {
+      configured: true,
+      root,
+      sampleRoot,
+      sampleYear,
+      sampleKey,
+      status: hasFiles ? 'candidate-missing' : 'directory-found',
+      candidateFiles,
+      note: hasFiles
+        ? `已检测到样本库，但缺少 ${sampleYear} 年周期样本文件，无法复核当前命盘样本。`
+        : '已检测到样本数据目录，但目录为空或不可读取。',
+    };
+  }
+
+  const sample = findSample(sampleRoot, sampleYear, sampleKey);
+  if (!sample) {
+    return {
+      configured: true,
+      root,
+      sampleRoot,
+      sampleYear,
+      sampleKey,
+      status: 'candidate-missing',
+      candidateFiles,
+      note: `已读取 ${sampleYear} 年周期样本文件，但未命中当前命盘样本键：${sampleKey}。`,
+    };
+  }
+
+  const comparison = compareChartToSample(chart, sample);
+  const passed = comparison.mismatches.length === 0;
 
   return {
     configured: true,
     root,
-    status: found ? 'candidate-found' : hasFiles ? 'directory-found' : 'candidate-missing',
+    sampleRoot,
+    sampleFile: sample.sampleFile,
+    sampleYear,
+    sampleKey,
+    status: passed ? 'candidate-found' : 'candidate-mismatch',
     candidateFiles,
-    note: found
-      ? `已找到当前命盘候选样本：${found}`
-      : '已检测到样本数据目录，但未按内置候选路径命中当前命盘样本；本次仍保留样本目录状态作为复核记录。',
+    comparison: {
+      passed,
+      checkedFields: comparison.checkedFields,
+      mismatches: comparison.mismatches,
+      topicKeys: sample.topics,
+    },
+    note: passed
+      ? `已命中 51.8 万样本库：${sample.sampleFile}，样本键 ${sampleKey}，命盘结构复核一致。`
+      : `已命中 51.8 万样本库：${sample.sampleFile}，但发现 ${comparison.mismatches.length} 项结构差异，需复核算法或样本版本。`,
   };
+}
+
+function resolveSampleRoot(root: string): string | undefined {
+  const candidates = [
+    root,
+    path.join(root, 'samples-out'),
+    path.join(root, 'ziwei-samples-toolkit', 'samples-out'),
+  ];
+  return candidates.find(candidate =>
+    existsSync(candidate) &&
+    statSync(candidate).isDirectory() &&
+    looksLikeSampleRoot(candidate)
+  );
+}
+
+function looksLikeSampleRoot(root: string): boolean {
+  try {
+    return readdirSync(root).some(name => /^year-\d{4}$/.test(name));
+  } catch {
+    return false;
+  }
+}
+
+function cycleSampleYear(lunarYear: number): number {
+  const offset = ((lunarYear - SAMPLE_CYCLE_START_YEAR) % 60 + 60) % 60;
+  return SAMPLE_CYCLE_START_YEAR + offset;
+}
+
+function sampleMonthFiles(sampleRoot: string, sampleYear: number): string[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const month = String(i + 1).padStart(2, '0');
+    return path.join(sampleRoot, `year-${sampleYear}`, `${sampleYear}-${month}.jsonl.gz`);
+  });
+}
+
+function buildSampleKey(chart: ZiweiChart): string {
+  const lunar = chart.lunarInfo;
+  return [
+    lunar.yearStem,
+    lunar.yearBranch,
+    lunar.lunarMonth,
+    lunar.lunarDay,
+    lunar.isLeapMonth ? 1 : 0,
+    chart.birthInfo.hour,
+    chart.birthInfo.gender,
+  ].join('|');
+}
+
+function findSample(sampleRoot: string, sampleYear: number, sampleKey: string): SampleChartSummary | null {
+  const cache = getSampleYearCache(sampleRoot, sampleYear);
+  return cache.samples.get(sampleKey) ?? null;
+}
+
+function getSampleYearCache(sampleRoot: string, sampleYear: number): SampleYearCache {
+  const cacheKey = `${sampleRoot}::${sampleYear}`;
+  const cached = sampleYearCache.get(cacheKey);
+  if (cached) {
+    cached.loadedAt = Date.now();
+    return cached;
+  }
+
+  const files = sampleMonthFiles(sampleRoot, sampleYear).filter(file => existsSync(file));
+  const samples = new Map<string, SampleChartSummary>();
+  for (const file of files) {
+    const text = gunzipSync(readFileSync(file)).toString('utf8');
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const raw = JSON.parse(line) as {
+          birthInfo: BirthInfo;
+          chart: SampleChartSummary['chart'];
+          topics?: Record<string, unknown>;
+        };
+        const sample: SampleChartSummary = {
+          birthInfo: raw.birthInfo,
+          chart: raw.chart,
+          topics: raw.topics ? Object.keys(raw.topics) : [],
+          sampleFile: file,
+        };
+        samples.set(buildSampleKey(raw.chart as ZiweiChart), sample);
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  const entry: SampleYearCache = { sampleRoot, sampleYear, loadedAt: Date.now(), samples, files };
+  sampleYearCache.set(cacheKey, entry);
+  trimSampleYearCache();
+  return entry;
+}
+
+function trimSampleYearCache() {
+  if (sampleYearCache.size <= SAMPLE_YEAR_CACHE_LIMIT) return;
+  const oldest = [...sampleYearCache.entries()].sort((a, b) => a[1].loadedAt - b[1].loadedAt)[0];
+  if (oldest) sampleYearCache.delete(oldest[0]);
+}
+
+function compareChartToSample(chart: ZiweiChart, sample: SampleChartSummary) {
+  const checkedFields: string[] = [];
+  const mismatches: string[] = [];
+  const check = (field: string, actual: unknown, expected: unknown) => {
+    checkedFields.push(field);
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      mismatches.push(`${field}: actual=${JSON.stringify(actual)} expected=${JSON.stringify(expected)}`);
+    }
+  };
+
+  check('lunarInfo.yearStem', chart.lunarInfo.yearStem, sample.chart.lunarInfo.yearStem);
+  check('lunarInfo.yearBranch', chart.lunarInfo.yearBranch, sample.chart.lunarInfo.yearBranch);
+  check('lunarInfo.lunarMonth', chart.lunarInfo.lunarMonth, sample.chart.lunarInfo.lunarMonth);
+  check('lunarInfo.lunarDay', chart.lunarInfo.lunarDay, sample.chart.lunarInfo.lunarDay);
+  check('lunarInfo.isLeapMonth', chart.lunarInfo.isLeapMonth, sample.chart.lunarInfo.isLeapMonth);
+  check('mingGongBranch', chart.mingGongBranch, sample.chart.mingGongBranch);
+  check('shenGongBranch', chart.shenGongBranch, sample.chart.shenGongBranch);
+  check('wuxingJu', chart.wuxingJu, sample.chart.wuxingJu);
+  check('wuxingJuName', chart.wuxingJuName, sample.chart.wuxingJuName);
+  check('ziweiPos', chart.ziweiPos, sample.chart.ziweiPos);
+  check('palaces', summarizePalaces(chart.palaces), summarizePalaces(sample.chart.palaces));
+  check('daXians', summarizeDaXians(chart.daXians), summarizeDaXians(sample.chart.daXians));
+
+  return { checkedFields, mismatches };
+}
+
+function summarizePalaces(palaces: Palace[]) {
+  return palaces.map(palace => ({
+    branch: palace.branch,
+    stem: palace.stem,
+    name: palace.name,
+    stars: palace.stars.map(star => ({
+      name: star.name,
+      type: star.type,
+      brightness: star.brightness ?? '',
+      siHua: star.siHua ?? '',
+    })),
+    daXianAge: palace.daXianAge ?? null,
+    isMingGong: Boolean(palace.isMingGong),
+    isShenGong: Boolean(palace.isShenGong),
+    isEmpty: Boolean(palace.isEmpty),
+    borrowedFromBranch: palace.borrowedFromBranch ?? null,
+    borrowedStars: palace.borrowedStars ?? [],
+  }));
+}
+
+function summarizeDaXians(daXians: ZiweiChart['daXians']) {
+  return daXians.map(daXian => ({
+    startAge: daXian.startAge,
+    endAge: daXian.endAge,
+    palaceBranch: daXian.palaceBranch,
+    palaceName: daXian.palaceName,
+    stemIndex: daXian.stemIndex ?? null,
+    stemName: daXian.stemName ?? '',
+  }));
 }
 
 function safeHasAnyFile(root: string): boolean {
