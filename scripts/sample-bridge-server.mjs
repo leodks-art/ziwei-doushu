@@ -13,6 +13,7 @@ const sampleCache = new Map();
 createServer(async (req, res) => {
   try {
     const targetUrl = new URL(req.url || '/', TARGET);
+    const requestPath = targetUrl.pathname;
     const body = await readBody(req);
     const upstream = await fetch(targetUrl, {
       method: req.method,
@@ -23,6 +24,15 @@ createServer(async (req, res) => {
     const buffer = Buffer.from(await upstream.arrayBuffer());
 
     if (!contentType.includes('application/json')) {
+      if (requestPath === '/api/interpret' && contentType.includes('text/event-stream')) {
+        const out = await enrichInterpretStream(buffer, body);
+        res.writeHead(upstream.status, {
+          'content-type': 'text/event-stream; charset=utf-8',
+          'cache-control': 'no-cache',
+        });
+        res.end(out);
+        return;
+      }
       writeProxyResponse(res, upstream, buffer);
       return;
     }
@@ -74,6 +84,89 @@ async function enrichPayload(payload) {
   payload.audit.warnings = updateWarnings(payload.audit.warnings, sampleData);
   if ('sampleData' in payload) payload.sampleData = sampleData;
   return payload;
+}
+
+async function enrichInterpretStream(buffer, requestBody) {
+  const note = await sampleNoteForRequest(requestBody).catch(() => null);
+  if (!note) return buffer;
+
+  const events = buffer.toString('utf8').split('\n\n');
+  const out = [];
+  let replacingSampleSection = false;
+
+  for (const event of events) {
+    if (!event.trim()) continue;
+    if (event.trim() === 'data: [DONE]') {
+      out.push(event);
+      continue;
+    }
+    if (!event.startsWith('data: ')) {
+      out.push(event);
+      continue;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(event.slice(6));
+    } catch {
+      out.push(event);
+      continue;
+    }
+
+    const text = parsed?.delta?.text;
+    if (typeof text !== 'string') {
+      out.push(event);
+      continue;
+    }
+
+    if (!replacingSampleSection && text.includes('**【样本数据状态】**')) {
+      const before = text.slice(0, text.indexOf('**【样本数据状态】**'));
+      out.push(sseText(`${before}**【样本数据状态】**\n${note}\n\n`));
+      replacingSampleSection = true;
+      const boundary = text.indexOf('**【边界说明】**');
+      if (boundary !== -1) {
+        out.push(sseText(text.slice(boundary)));
+        replacingSampleSection = false;
+      }
+      continue;
+    }
+
+    if (replacingSampleSection) {
+      const boundary = text.indexOf('**【边界说明】**');
+      if (boundary === -1) continue;
+      out.push(sseText(text.slice(boundary)));
+      replacingSampleSection = false;
+      continue;
+    }
+
+    out.push(event);
+  }
+
+  return Buffer.from(`${out.join('\n\n')}\n\n`);
+}
+
+function sseText(text) {
+  return `data: ${JSON.stringify({ delta: { text } })}`;
+}
+
+async function sampleNoteForRequest(requestBody) {
+  const body = JSON.parse(requestBody.toString('utf8') || '{}');
+  const chartInput = body.chart?.birthInfo || body.birthInfo || body;
+  const response = await fetch(new URL('/api/calculate', TARGET), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(chartInput),
+  });
+  if (!response.ok) return null;
+  const payload = await response.json();
+  const chart = payload.chart || (
+    payload.birthInfo && payload.lunarInfo && Array.isArray(payload.palaces)
+      ? payload
+      : null
+  );
+  if (!chart) return null;
+  const sampleData = await inspectSampleData(chart);
+  return sampleData.note;
 }
 
 function updateSampleStep(steps, sampleData) {
